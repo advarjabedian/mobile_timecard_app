@@ -15,23 +15,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.http import JsonResponse
+from django.shortcuts import render
 from django.urls import include, path
 
 
 def home(request):
-    return JsonResponse({
-        "app": "PunchClock API",
-        "status": "running",
-        "endpoints": {
-            "POST /api/login/": "Lookup employee by number",
-            "POST /api/punch-in/": "Record a punch in",
-            "POST /api/punch-out/": "Record a punch out",
-            "GET /api/today/<employee_id>/": "Today's punches",
-            "GET /api/status/<employee_id>/": "Current punch status",
-            "GET /api/history/<employee_id>/": "Last 50 punches",
-        },
-    })
+    return render(request, "home.html")
 
 
 urlpatterns = [

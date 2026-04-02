@@ -33,6 +33,7 @@ def punch_in(request):
 
     now = timezone.now()
     scan = PayrollScan.objects.create(
+        import_run_id=0,
         employee_id=int(employee_id),
         scan_date=now.date(),
         scan_time=now,
@@ -50,6 +51,7 @@ def punch_out(request):
 
     now = timezone.now()
     scan = PayrollScan.objects.create(
+        import_run_id=0,
         employee_id=int(employee_id),
         scan_date=now.date(),
         scan_time=now,

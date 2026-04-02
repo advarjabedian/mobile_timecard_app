@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PunchClock</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f766e;
+            --primary-strong: #0d5f58;
+            --accent: #f3b35d;
+            --bg: #f4f8f6;
+            --bg-accent: #e8f0ec;
+            --surface: rgba(255,255,255,0.82);
+            --text: #113529;
+            --muted: rgba(17,53,41,0.55);
+            --line: rgba(17,53,41,0.1);
+            --shadow: 0 8px 32px rgba(17,53,41,0.08);
+            --danger: #b91c1c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(243,179,93,0.28), transparent 30%),
+                radial-gradient(circle at top right, rgba(15,118,110,0.18), transparent 32%),
+                linear-gradient(135deg, var(--bg) 0%, var(--bg-accent) 100%);
+        }
+
+        /* ---- LOGIN SCREEN ---- */
+        .login-screen {
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .login-screen.hidden { display: none; }
+
+        .login-card {
+            backdrop-filter: blur(16px);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            padding: 2.5rem 2rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .login-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(15,118,110,0.1);
+            color: var(--primary-strong);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .login-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .display {
+            width: 100%;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(17,53,41,0.12);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 6px;
+            min-height: 60px;
+            color: var(--primary-strong);
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .key {
+            padding: 16px 0;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(17,53,41,0.08);
+            border-radius: 16px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
+            box-shadow: 0 2px 8px rgba(17,53,41,0.04);
+        }
+        .key:hover {
+            transform: translateY(-1px);
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(17,53,41,0.08);
+        }
+        .key:active {
+            transform: translateY(0);
+            background: rgba(15,118,110,0.08);
+        }
+        .key-clear { grid-column: 2 / 4; }
+        .key-zero { grid-column: 1 / 2; }
+
+        .enter-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+            border: none;
+            border-radius: 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: #fff;
+            transition: transform 140ms ease, box-shadow 140ms ease;
+            box-shadow: 0 4px 16px rgba(15,118,110,0.25);
+        }
+        .enter-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,118,110,0.3); }
+        .enter-btn:active { transform: translateY(0); }
+        .enter-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .error {
+            color: var(--danger);
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            min-height: 1.5rem;
+        }
+
+        /* ---- PUNCH SCREEN ---- */
+        .punch-screen { display: none; }
+        .punch-screen.active { display: block; }
+
+        .punch-container {
+            min-height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0; left: 0;
+            padding: 2rem 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            background:
+                radial-gradient(circle at top left, rgba(243,179,93,0.18), transparent 35%),
+                radial-gradient(circle at bottom right, rgba(15,118,110,0.15), transparent 40%),
+                linear-gradient(160deg, #0d4f48 0%, #0a3d38 40%, #072e2a 100%);
+        }
+
+        .punch-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .emp-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .emp-date {
+            font-size: 1rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .punch-card {
+            backdrop-filter: blur(16px);
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            flex: 1;
+            max-height: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .punch-log-header {
+            display: flex;
+            padding: 0.6rem 1rem;
+            background: rgba(15,118,110,0.06);
+            border-bottom: 1px solid rgba(17,53,41,0.08);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .punch-log-header span { flex: 1; }
+
+        .punch-log-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.25rem 0;
+        }
+
+        .punch-log-row {
+            display: flex;
+            padding: 0.5rem 1rem;
+            font-size: 0.88rem;
+            color: var(--text);
+            border-bottom: 1px solid rgba(17,53,41,0.05);
+            transition: background 120ms ease;
+        }
+        .punch-log-row:hover { background: rgba(15,118,110,0.03); }
+        .punch-log-row span { flex: 1; }
+
+        .punch-log-row .punch-in-label {
+            color: var(--primary-strong);
+            font-weight: 700;
+        }
+        .punch-log-row .punch-out-label {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .hours-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 1rem;
+            background: rgba(15,118,110,0.04);
+            border-top: 1px solid rgba(17,53,41,0.08);
+        }
+        .hours-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .hours-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-strong);
+        }
+
+        /* Schedule */
+        .schedule-section {
+            margin-bottom: 0.75rem;
+        }
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.55);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.4rem;
+        }
+
+        .schedule-card {
+            backdrop-filter: blur(16px);
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.72rem;
+        }
+        .schedule-table th {
+            padding: 0.45rem 0.25rem;
+            background: rgba(15,118,110,0.06);
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            border-bottom: 1px solid rgba(17,53,41,0.08);
+        }
+        .schedule-table td {
+            padding: 0.35rem 0.25rem;
+            text-align: center;
+            color: var(--text);
+            border-bottom: 1px solid rgba(17,53,41,0.04);
+        }
+        .schedule-table .time-cell {
+            color: var(--primary-strong);
+            font-weight: 700;
+        }
+        .schedule-table .today-col {
+            background: rgba(15,118,110,0.08);
+        }
+        .schedule-table .dept-cell {
+            font-weight: 700;
+            text-align: left;
+            padding-left: 0.6rem;
+        }
+
+        /* Action buttons */
+        .btn-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: auto;
+            padding-top: 0.75rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1.1rem 0;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 140ms ease, box-shadow 140ms ease;
+        }
+        .action-btn:hover { transform: translateY(-2px); }
+        .action-btn:active { transform: translateY(0); }
+
+        .in-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(15,118,110,0.3);
+        }
+        .in-btn:hover { box-shadow: 0 8px 24px rgba(15,118,110,0.35); }
+
+        .out-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+        }
+        .out-btn:hover { box-shadow: 0 8px 24px rgba(245,158,11,0.35); }
+
+        .exit-btn {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.7);
+            box-shadow: none;
+        }
+        .exit-btn:hover {
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        /* Status pill */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+        .status-pill.is-in {
+            background: rgba(15,118,110,0.15);
+            color: #0f766e;
+        }
+        .status-pill.is-out {
+            background: rgba(185,28,28,0.1);
+            color: #991b1b;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .is-in .status-dot { background: #0f766e; }
+        .is-out .status-dot { background: #991b1b; }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-card">
+        <div class="login-eyebrow">PunchClock</div>
+        <h1 class="login-title">Enter Employee Number</h1>
+        <div class="display" id="display">&nbsp;</div>
+        <div class="numpad">
+            <button class="key" onclick="press('7')">7</button>
+            <button class="key" onclick="press('8')">8</button>
+            <button class="key" onclick="press('9')">9</button>
+            <button class="key" onclick="press('4')">4</button>
+            <button class="key" onclick="press('5')">5</button>
+            <button class="key" onclick="press('6')">6</button>
+            <button class="key" onclick="press('1')">1</button>
+            <button class="key" onclick="press('2')">2</button>
+            <button class="key" onclick="press('3')">3</button>
+            <button class="key key-zero" onclick="press('0')">0</button>
+            <button class="key key-clear" onclick="clearNum()">Clear</button>
+        </div>
+        <button class="enter-btn" id="enterBtn" onclick="login()" disabled>Enter</button>
+        <div class="error" id="error"></div>
+    </div>
+</div>
+
+<!-- PUNCH SCREEN -->
+<div class="punch-screen" id="punchScreen">
+    <div class="punch-container">
+        <div class="punch-header">
+            <div class="emp-name" id="empName"></div>
+            <div class="emp-date" id="empDate"></div>
+            <div id="statusPill"></div>
+        </div>
+
+        <div class="punch-card">
+            <div class="punch-log-header">
+                <span>Date</span><span>Time</span><span>Type</span>
+            </div>
+            <div class="punch-log-scroll" id="punchLog"></div>
+            <div class="hours-section">
+                <span class="hours-label">Hours Worked</span>
+                <span class="hours-value" id="hoursWorked">0.0 hrs</span>
+            </div>
+        </div>
+
+        <div class="schedule-section">
+            <div class="section-label">Week Schedule</div>
+            <div class="schedule-card">
+                <table class="schedule-table" id="scheduleTable"></table>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="action-btn in-btn" onclick="doPunch('in')">Punch In</button>
+            <button class="action-btn out-btn" onclick="doPunch('out')">Punch Out</button>
+            <button class="action-btn exit-btn" onclick="doExit()">Exit</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = window.location.origin + '/api';
+    let number = '';
+    let employee = null;
+
+    function press(d) {
+        if (number.length < 10) {
+            number += d;
+            document.getElementById('display').textContent = number;
+            document.getElementById('enterBtn').disabled = false;
+            document.getElementById('error').textContent = '';
+        }
+    }
+
+    function clearNum() {
+        number = '';
+        document.getElementById('display').innerHTML = '&nbsp;';
+        document.getElementById('enterBtn').disabled = true;
+        document.getElementById('error').textContent = '';
+    }
+
+    async function login() {
+        if (!number) return;
+        document.getElementById('enterBtn').disabled = true;
+        document.getElementById('enterBtn').textContent = 'Loading...';
+        try {
+            const res = await fetch(API + '/login/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({number: number})
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Employee not found');
+            }
+            employee = await res.json();
+            showPunchScreen();
+        } catch (e) {
+            document.getElementById('error').textContent = e.message;
+            document.getElementById('enterBtn').disabled = false;
+        }
+        document.getElementById('enterBtn').textContent = 'Enter';
+    }
+
+    function showPunchScreen() {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('punchScreen').classList.add('active');
+        document.getElementById('empName').textContent = employee.full_name;
+
+        const now = new Date();
+        document.getElementById('empDate').textContent = now.toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        buildSchedule();
+        loadTodayPunches();
+    }
+
+    function buildSchedule() {
+        const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const todayIdx = new Date().getDay();
+        const s = employee.schedule;
+
+        let html = '<tr><th>Role</th>';
+        labels.forEach((l, i) => {
+            html += '<th class="' + (i === todayIdx ? 'today-col' : '') + '">' + l + '</th>';
+        });
+        html += '</tr><tr><td class="dept-cell">' +
+            (employee.department || employee.job_title || '\u2014') + '</td>';
+        days.forEach((d, i) => {
+            html += '<td class="time-cell ' + (i === todayIdx ? 'today-col' : '') + '">' + (s[d]?.in || '\u2014') + '</td>';
+        });
+        html += '</tr><tr><td></td>';
+        days.forEach((d, i) => {
+            html += '<td class="time-cell ' + (i === todayIdx ? 'today-col' : '') + '">' + (s[d]?.out || '\u2014') + '</td>';
+        });
+        html += '</tr>';
+        document.getElementById('scheduleTable').innerHTML = html;
+    }
+
+    async function loadTodayPunches() {
+        const res = await fetch(API + '/today/' + employee.id + '/');
+        const punches = await res.json();
+
+        let logHtml = '';
+        punches.forEach(p => {
+            const d = new Date(p.scan_time);
+            const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+            const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true});
+            const cls = p.working ? 'punch-in-label' : 'punch-out-label';
+            logHtml += '<div class="punch-log-row"><span>' + dateStr + '</span><span>' + timeStr + '</span><span class="' + cls + '">' + p.punch_type + '</span></div>';
+        });
+        document.getElementById('punchLog').innerHTML = logHtml;
+
+        // Status pill
+        const lastPunch = punches.length > 0 ? punches[punches.length - 1] : null;
+        const pillEl = document.getElementById('statusPill');
+        if (lastPunch) {
+            const isIn = lastPunch.working;
+            pillEl.innerHTML = '<div class="status-pill ' + (isIn ? 'is-in' : 'is-out') + '"><span class="status-dot"></span>' + (isIn ? 'Clocked In' : 'Clocked Out') + '</div>';
+        } else {
+            pillEl.innerHTML = '<div class="status-pill is-out"><span class="status-dot"></span>Not Clocked In</div>';
+        }
+
+        // Calculate hours
+        let hours = 0;
+        for (let i = 0; i < punches.length - 1; i += 2) {
+            const inT = new Date(punches[i].scan_time).getTime();
+            const outT = (i+1 < punches.length) ? new Date(punches[i+1].scan_time).getTime() : Date.now();
+            hours += (outT - inT) / 3600000;
+        }
+        if (punches.length % 2 === 1) {
+            hours += (Date.now() - new Date(punches[punches.length-1].scan_time).getTime()) / 3600000;
+        }
+        document.getElementById('hoursWorked').textContent = hours.toFixed(1) + ' hrs';
+    }
+
+    async function doPunch(type) {
+        const url = type === 'in' ? '/punch-in/' : '/punch-out/';
+        await fetch(API + url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({employee_id: employee.id})
+        });
+        loadTodayPunches();
+    }
+
+    function doExit() {
+        document.getElementById('punchScreen').classList.remove('active');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        number = '';
+        employee = null;
+        document.getElementById('display').innerHTML = '&nbsp;';
+        document.getElementById('enterBtn').disabled = true;
+        document.getElementById('error').textContent = '';
+    }
+</script>
+</body>
+</html>
