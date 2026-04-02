@@ -31,7 +31,7 @@ def punch_in(request):
     if not employee_id:
         return Response({"error": "employee_id is required."}, status=400)
 
-    last_scan = PayrollScan.objects.filter(employee_id=int(employee_id)).order_by("-scan_time").first()
+    last_scan = PayrollScan.objects.filter(employee_id=int(employee_id)).order_by("-id").first()
     if last_scan and last_scan.working:
         return Response({"error": "Already punched in."}, status=400)
 
@@ -53,7 +53,7 @@ def punch_out(request):
     if not employee_id:
         return Response({"error": "employee_id is required."}, status=400)
 
-    last_scan = PayrollScan.objects.filter(employee_id=int(employee_id)).order_by("-scan_time").first()
+    last_scan = PayrollScan.objects.filter(employee_id=int(employee_id)).order_by("-id").first()
     if not last_scan or not last_scan.working:
         return Response({"error": "Not currently punched in."}, status=400)
 
@@ -61,7 +61,7 @@ def punch_out(request):
     scan = PayrollScan.objects.create(
         import_run_id=31,
         employee_id=int(employee_id),
-        scan_date=now.date(),
+        scan_date=last_scan.scan_date,
         scan_time=now,
         working=False,
     )
@@ -89,7 +89,7 @@ def today_punches(request, employee_id):
 @api_view(["GET"])
 def current_status(request, employee_id):
     """Check if an employee is currently punched in or out."""
-    last_scan = PayrollScan.objects.filter(employee_id=employee_id).order_by("-scan_time").first()
+    last_scan = PayrollScan.objects.filter(employee_id=employee_id).order_by("-id").first()
     if last_scan:
         return Response({
             "is_punched_in": last_scan.working,
