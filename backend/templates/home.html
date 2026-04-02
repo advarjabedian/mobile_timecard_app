@@ -391,6 +391,18 @@
         }
         .is-in .status-dot { background: #0f766e; }
         .is-out .status-dot { background: #991b1b; }
+
+        .login-warning {
+            margin-bottom: 1.25rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 12px;
+            background: rgba(185,28,28,0.06);
+            border: 1px solid rgba(185,28,28,0.15);
+            color: #991b1b;
+            font-size: 0.78rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -400,6 +412,7 @@
     <div class="login-card">
         <div class="login-eyebrow">PunchClock</div>
         <h1 class="login-title">Enter Employee Number</h1>
+        <p class="login-warning">Clocking in or out for other employees is strictly prohibited and will result in disciplinary action.</p>
         <div class="display" id="display">&nbsp;</div>
         <div class="numpad">
             <button class="key" onclick="press('7')">7</button>
@@ -458,6 +471,7 @@
     const API = window.location.origin + '/api';
     let number = '';
     let employee = null;
+    let autoExitTimer = null;
 
     function press(d) {
         if (number.length < 10) {
@@ -510,6 +524,12 @@
 
         buildSchedule();
         loadTodayPunches();
+        resetAutoExit();
+    }
+
+    function resetAutoExit() {
+        if (autoExitTimer) clearTimeout(autoExitTimer);
+        autoExitTimer = setTimeout(doExit, 20000);
     }
 
     function buildSchedule() {
@@ -591,6 +611,7 @@
     }
 
     function doExit() {
+        if (autoExitTimer) { clearTimeout(autoExitTimer); autoExitTimer = null; }
         document.getElementById('punchScreen').classList.remove('active');
         document.getElementById('loginScreen').classList.remove('hidden');
         number = '';
