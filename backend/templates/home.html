@@ -578,12 +578,16 @@
 
     async function doPunch(type) {
         const url = type === 'in' ? '/punch-in/' : '/punch-out/';
-        await fetch(API + url, {
+        const res = await fetch(API + url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({employee_id: employee.id})
         });
-        loadTodayPunches();
+        if (res.ok) {
+            setTimeout(doExit, 1500);
+        } else {
+            loadTodayPunches();
+        }
     }
 
     function doExit() {
