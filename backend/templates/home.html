@@ -26,10 +26,7 @@
             font-family: 'Outfit', sans-serif;
             color: var(--text);
             min-height: 100vh;
-            background:
-                radial-gradient(circle at top left, rgba(243,179,93,0.28), transparent 30%),
-                radial-gradient(circle at top right, rgba(15,118,110,0.18), transparent 32%),
-                linear-gradient(135deg, var(--bg) 0%, var(--bg-accent) 100%);
+            background: #ffffff;
         }
 
         /* ---- LOGIN SCREEN ---- */
@@ -163,10 +160,7 @@
             padding: 2rem 1.25rem 1.5rem;
             display: flex;
             flex-direction: column;
-            background:
-                radial-gradient(circle at top left, rgba(243,179,93,0.18), transparent 35%),
-                radial-gradient(circle at bottom right, rgba(15,118,110,0.15), transparent 40%),
-                linear-gradient(160deg, #0d4f48 0%, #0a3d38 40%, #072e2a 100%);
+            background: #ffffff;
         }
 
         .punch-header {
@@ -178,21 +172,20 @@
             font-family: 'Space Grotesk', sans-serif;
             font-size: 1.75rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--text);
         }
         .emp-date {
             font-size: 1rem;
-            color: var(--accent);
+            color: var(--muted);
             font-weight: 600;
             margin-top: 0.25rem;
         }
 
         .punch-card {
-            backdrop-filter: blur(16px);
-            background: rgba(255,255,255,0.92);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: #fff;
+            border: 1px solid var(--line);
             border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            box-shadow: var(--shadow);
             overflow: hidden;
             margin-bottom: 0.75rem;
             flex: 1;
@@ -269,18 +262,17 @@
         .section-label {
             font-size: 0.75rem;
             font-weight: 700;
-            color: rgba(255,255,255,0.55);
+            color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.06em;
             margin-bottom: 0.4rem;
         }
 
         .schedule-card {
-            backdrop-filter: blur(16px);
-            background: rgba(255,255,255,0.9);
-            border: 1px solid rgba(255,255,255,0.25);
+            background: #fff;
+            border: 1px solid var(--line);
             border-radius: 16px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            box-shadow: var(--shadow);
             overflow: hidden;
         }
 
@@ -336,8 +328,9 @@
             cursor: pointer;
             transition: transform 140ms ease, box-shadow 140ms ease;
         }
-        .action-btn:hover { transform: translateY(-2px); }
-        .action-btn:active { transform: translateY(0); }
+        .action-btn:hover:not(:disabled) { transform: translateY(-2px); }
+        .action-btn:active:not(:disabled) { transform: translateY(0); }
+        .action-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
         .in-btn {
             background: linear-gradient(135deg, var(--primary), var(--primary-strong));
@@ -354,15 +347,15 @@
         .out-btn:hover { box-shadow: 0 8px 24px rgba(245,158,11,0.35); }
 
         .exit-btn {
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: rgba(255,255,255,0.7);
+            background: rgba(17,53,41,0.06);
+            border: 1px solid var(--line);
+            color: var(--muted);
             box-shadow: none;
         }
         .exit-btn:hover {
-            background: rgba(255,255,255,0.18);
-            color: #fff;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            background: rgba(17,53,41,0.1);
+            color: var(--text);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
         }
 
         /* Status pill */
@@ -447,8 +440,8 @@
         </div>
 
         <div class="btn-row">
-            <button class="action-btn in-btn" onclick="doPunch('in')">Punch In</button>
-            <button class="action-btn out-btn" onclick="doPunch('out')">Punch Out</button>
+            <button class="action-btn in-btn" id="inBtn" onclick="doPunch('in')">Punch In</button>
+            <button class="action-btn out-btn" id="outBtn" onclick="doPunch('out')">Punch Out</button>
             <button class="action-btn exit-btn" onclick="doExit()">Exit</button>
         </div>
     </div>
@@ -549,15 +542,19 @@
         });
         document.getElementById('punchLog').innerHTML = logHtml;
 
-        // Status pill
+        // Status pill + button toggle
         const lastPunch = punches.length > 0 ? punches[punches.length - 1] : null;
         const pillEl = document.getElementById('statusPill');
+        const isIn = lastPunch ? lastPunch.working : false;
+
         if (lastPunch) {
-            const isIn = lastPunch.working;
             pillEl.innerHTML = '<div class="status-pill ' + (isIn ? 'is-in' : 'is-out') + '"><span class="status-dot"></span>' + (isIn ? 'Clocked In' : 'Clocked Out') + '</div>';
         } else {
             pillEl.innerHTML = '<div class="status-pill is-out"><span class="status-dot"></span>Not Clocked In</div>';
         }
+
+        document.getElementById('inBtn').disabled = isIn;
+        document.getElementById('outBtn').disabled = !isIn;
 
         // Calculate hours
         let hours = 0;

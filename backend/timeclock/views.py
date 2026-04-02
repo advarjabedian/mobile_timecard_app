@@ -31,9 +31,13 @@ def punch_in(request):
     if not employee_id:
         return Response({"error": "employee_id is required."}, status=400)
 
+    last_scan = PayrollScan.objects.filter(employee_id=int(employee_id)).order_by("-scan_time").first()
+    if last_scan and last_scan.working:
+        return Response({"error": "Already punched in."}, status=400)
+
     now = timezone.now()
     scan = PayrollScan.objects.create(
-        import_run_id=0,
+        import_run_id=31,
         employee_id=int(employee_id),
         scan_date=now.date(),
         scan_time=now,
@@ -44,14 +48,18 @@ def punch_in(request):
 
 @api_view(["POST"])
 def punch_out(request):
-    """Record a punch-out for the employee."""
+    """Punch out: create a new row with working=False."""
     employee_id = request.data.get("employee_id")
     if not employee_id:
         return Response({"error": "employee_id is required."}, status=400)
 
+    last_scan = PayrollScan.objects.filter(employee_id=int(employee_id)).order_by("-scan_time").first()
+    if not last_scan or not last_scan.working:
+        return Response({"error": "Not currently punched in."}, status=400)
+
     now = timezone.now()
     scan = PayrollScan.objects.create(
-        import_run_id=0,
+        import_run_id=31,
         employee_id=int(employee_id),
         scan_date=now.date(),
         scan_time=now,
