@@ -615,7 +615,7 @@
             body: JSON.stringify({employee_id: employee.id})
         });
         if (res.ok) {
-            setTimeout(doExit, 1500);
+            doExit();
         } else {
             loadTodayPunches();
         }
