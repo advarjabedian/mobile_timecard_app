@@ -1,5 +1,5 @@
-// Change this to your Render backend URL after deploying
-const API_BASE = "http://10.0.2.2:8000/api"; // Android emulator -> host machine
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL || "https://mobile-timecard-app.onrender.com/api";
 
 export interface Employee {
   id: number;
