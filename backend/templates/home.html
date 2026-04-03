@@ -558,11 +558,11 @@
         html += '</tr><tr><td class="dept-cell">' +
             (employee.department || employee.job_title || '\u2014') + '</td>';
         days.forEach((d, i) => {
-            html += '<td class="time-cell ' + (i === todayIdx ? 'today-col' : '') + '">' + (s[d]?.in || '\u2014') + '</td>';
+            html += '<td class="time-cell ' + (i === todayIdx ? 'today-col' : '') + '">' + ((s[d] && s[d].in) || '\u2014') + '</td>';
         });
         html += '</tr><tr><td></td>';
         days.forEach((d, i) => {
-            html += '<td class="time-cell ' + (i === todayIdx ? 'today-col' : '') + '">' + (s[d]?.out || '\u2014') + '</td>';
+            html += '<td class="time-cell ' + (i === todayIdx ? 'today-col' : '') + '">' + ((s[d] && s[d].out) || '\u2014') + '</td>';
         });
         html += '</tr>';
         document.getElementById('scheduleTable').innerHTML = html;
