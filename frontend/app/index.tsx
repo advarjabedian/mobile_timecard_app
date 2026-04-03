@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Alert,
-  Pressable,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -62,49 +62,43 @@ export default function LoginScreen() {
               }
               if (key === "Clear") {
                 return (
-                  <Pressable
+                  <View
                     key={keyIndex}
-                    style={({ pressed }) => [
-                      styles.key,
-                      styles.keyClear,
-                      pressed && styles.keyPressed,
-                    ]}
-                    onPress={handleClear}
+                    style={[styles.key, styles.keyClear]}
+                    // @ts-ignore: onClick works on web via React Native Web
+                    onClick={handleClear}
                   >
                     <Text style={styles.keyText}>Clear</Text>
-                  </Pressable>
+                  </View>
                 );
               }
               return (
-                <Pressable
+                <View
                   key={keyIndex}
-                  style={({ pressed }) => [
-                    styles.key,
-                    pressed && styles.keyPressed,
-                  ]}
-                  onPress={() => handlePress(key)}
+                  style={styles.key}
+                  // @ts-ignore: onClick works on web via React Native Web
+                  onClick={() => handlePress(key)}
                 >
                   <Text style={styles.keyText}>{key}</Text>
-                </Pressable>
+                </View>
               );
             })}
           </View>
         ))}
       </View>
 
-      <Pressable
-        style={({ pressed }) => [
+      <View
+        style={[
           styles.enterButton,
           (loading || !number) && styles.enterButtonDisabled,
-          pressed && styles.keyPressed,
         ]}
-        onPress={handleEnter}
-        disabled={loading || !number}
+        // @ts-ignore: onClick works on web via React Native Web
+        onClick={handleEnter}
       >
         <Text style={styles.enterText}>
           {loading ? "Loading..." : "Enter"}
         </Text>
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -159,6 +153,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#ccc",
+    // @ts-ignore: web-only styles
+    cursor: "pointer",
+    userSelect: "none",
   },
   keyClear: {
     flex: 2,
@@ -181,12 +178,12 @@ const styles = StyleSheet.create({
     borderColor: "#2e8b57",
     borderRadius: 8,
     alignItems: "center",
+    // @ts-ignore: web-only styles
+    cursor: "pointer",
+    userSelect: "none",
   },
   enterButtonDisabled: {
     opacity: 0.5,
-  },
-  keyPressed: {
-    opacity: 0.6,
   },
   enterText: {
     fontSize: 32,
