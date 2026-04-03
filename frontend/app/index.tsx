@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
   Alert,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -62,38 +62,49 @@ export default function LoginScreen() {
               }
               if (key === "Clear") {
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={keyIndex}
-                    style={[styles.key, styles.keyClear]}
+                    style={({ pressed }) => [
+                      styles.key,
+                      styles.keyClear,
+                      pressed && styles.keyPressed,
+                    ]}
                     onPress={handleClear}
                   >
                     <Text style={styles.keyText}>Clear</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               }
               return (
-                <TouchableOpacity
+                <Pressable
                   key={keyIndex}
-                  style={styles.key}
+                  style={({ pressed }) => [
+                    styles.key,
+                    pressed && styles.keyPressed,
+                  ]}
                   onPress={() => handlePress(key)}
                 >
                   <Text style={styles.keyText}>{key}</Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
         ))}
       </View>
 
-      <TouchableOpacity
-        style={[styles.enterButton, loading && styles.enterButtonDisabled]}
+      <Pressable
+        style={({ pressed }) => [
+          styles.enterButton,
+          (loading || !number) && styles.enterButtonDisabled,
+          pressed && styles.keyPressed,
+        ]}
         onPress={handleEnter}
         disabled={loading || !number}
       >
         <Text style={styles.enterText}>
           {loading ? "Loading..." : "Enter"}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -173,6 +184,9 @@ const styles = StyleSheet.create({
   },
   enterButtonDisabled: {
     opacity: 0.5,
+  },
+  keyPressed: {
+    opacity: 0.6,
   },
   enterText: {
     fontSize: 32,
