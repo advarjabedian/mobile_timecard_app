@@ -113,18 +113,13 @@
             cursor: pointer;
             color: var(--text);
             user-select: none;
+            -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
-            transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease;
+            touch-action: manipulation;
             box-shadow: 0 2px 8px rgba(17,53,41,0.04);
         }
-        .key:hover {
-            transform: translateY(-1px);
-            background: #fff;
-            box-shadow: 0 4px 16px rgba(17,53,41,0.08);
-        }
         .key:active {
-            transform: translateY(0);
-            background: rgba(15,118,110,0.08);
+            background: rgba(15,118,110,0.15);
         }
         .key-clear { grid-column: 2 / 4; }
         .key-zero { grid-column: 1 / 2; }
@@ -140,12 +135,10 @@
             font-weight: 700;
             cursor: pointer;
             color: #fff;
-            transition: transform 140ms ease, box-shadow 140ms ease;
+            touch-action: manipulation;
             box-shadow: 0 4px 16px rgba(15,118,110,0.25);
         }
-        .enter-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,118,110,0.3); }
-        .enter-btn:active { transform: translateY(0); }
-        .enter-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .enter-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .error {
             color: var(--danger);
@@ -414,20 +407,20 @@
         <h1 class="login-title">Enter Employee Number</h1>
         <p class="login-warning">Clocking in or out for other employees is strictly prohibited and will result in disciplinary action.</p>
         <div class="display" id="display">&nbsp;</div>
-        <div class="numpad">
-            <button class="key" onclick="press('7')">7</button>
-            <button class="key" onclick="press('8')">8</button>
-            <button class="key" onclick="press('9')">9</button>
-            <button class="key" onclick="press('4')">4</button>
-            <button class="key" onclick="press('5')">5</button>
-            <button class="key" onclick="press('6')">6</button>
-            <button class="key" onclick="press('1')">1</button>
-            <button class="key" onclick="press('2')">2</button>
-            <button class="key" onclick="press('3')">3</button>
-            <button class="key key-zero" onclick="press('0')">0</button>
-            <button class="key key-clear" onclick="clearNum()">Clear</button>
+        <div class="numpad" id="numpad">
+            <div class="key" data-digit="7">7</div>
+            <div class="key" data-digit="8">8</div>
+            <div class="key" data-digit="9">9</div>
+            <div class="key" data-digit="4">4</div>
+            <div class="key" data-digit="5">5</div>
+            <div class="key" data-digit="6">6</div>
+            <div class="key" data-digit="1">1</div>
+            <div class="key" data-digit="2">2</div>
+            <div class="key" data-digit="3">3</div>
+            <div class="key key-zero" data-digit="0">0</div>
+            <div class="key key-clear" data-action="clear">Clear</div>
         </div>
-        <button class="enter-btn" id="enterBtn" onclick="login()" disabled>Enter</button>
+        <div class="enter-btn" id="enterBtn" data-action="enter">Enter</div>
         <div class="error" id="error"></div>
     </div>
 </div>
@@ -460,9 +453,9 @@
         </div>
 
         <div class="btn-row">
-            <button class="action-btn in-btn" id="inBtn" onclick="doPunch('in')">Punch In</button>
-            <button class="action-btn out-btn" id="outBtn" onclick="doPunch('out')">Punch Out</button>
-            <button class="action-btn exit-btn" onclick="doExit()">Exit</button>
+            <div class="action-btn in-btn" id="inBtn" data-action="punch-in">Punch In</div>
+            <div class="action-btn out-btn" id="outBtn" data-action="punch-out">Punch Out</div>
+            <div class="action-btn exit-btn" data-action="exit">Exit</div>
         </div>
     </div>
 </div>
@@ -472,12 +465,14 @@
     let number = '';
     let employee = null;
     let autoExitTimer = null;
+    let enterDisabled = true;
 
     function press(d) {
         if (number.length < 10) {
             number += d;
             document.getElementById('display').textContent = number;
-            document.getElementById('enterBtn').disabled = false;
+            enterDisabled = false;
+            document.getElementById('enterBtn').style.opacity = '1';
             document.getElementById('error').textContent = '';
         }
     }
@@ -485,29 +480,47 @@
     function clearNum() {
         number = '';
         document.getElementById('display').innerHTML = '&nbsp;';
-        document.getElementById('enterBtn').disabled = true;
+        enterDisabled = true;
+        document.getElementById('enterBtn').style.opacity = '0.4';
         document.getElementById('error').textContent = '';
     }
 
+    // Use touch events with click fallback — handles old Android tablets
+    function tap(el, callback) {
+        var fired = false;
+        el.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            if (!fired) { fired = true; callback(); }
+            setTimeout(function() { fired = false; }, 300);
+        }, {passive: false});
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!fired) { fired = true; callback(); }
+            setTimeout(function() { fired = false; }, 300);
+        });
+    }
+
     async function login() {
-        if (!number) return;
-        document.getElementById('enterBtn').disabled = true;
+        if (!number || enterDisabled) return;
+        enterDisabled = true;
+        document.getElementById('enterBtn').style.opacity = '0.4';
         document.getElementById('enterBtn').textContent = 'Loading...';
         try {
-            const res = await fetch(API + '/login/', {
+            var res = await fetch(API + '/login/', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({number: number})
             });
             if (!res.ok) {
-                const err = await res.json();
+                var err = await res.json();
                 throw new Error(err.error || 'Employee not found');
             }
             employee = await res.json();
             showPunchScreen();
         } catch (e) {
             document.getElementById('error').textContent = e.message;
-            document.getElementById('enterBtn').disabled = false;
+            enterDisabled = false;
+            document.getElementById('enterBtn').style.opacity = '1';
         }
         document.getElementById('enterBtn').textContent = 'Enter';
     }
@@ -580,8 +593,10 @@
             pillEl.innerHTML = '<div class="status-pill is-out"><span class="status-dot"></span>Not Clocked In</div>';
         }
 
-        document.getElementById('inBtn').disabled = isIn;
-        document.getElementById('outBtn').disabled = !isIn;
+        document.getElementById('inBtn').style.opacity = isIn ? '0.35' : '1';
+        document.getElementById('inBtn').dataset.disabled = isIn;
+        document.getElementById('outBtn').style.opacity = !isIn ? '0.35' : '1';
+        document.getElementById('outBtn').dataset.disabled = !isIn;
 
         // Calculate hours
         let hours = 0;
@@ -617,9 +632,20 @@
         number = '';
         employee = null;
         document.getElementById('display').innerHTML = '&nbsp;';
-        document.getElementById('enterBtn').disabled = true;
+        enterDisabled = true;
+        document.getElementById('enterBtn').style.opacity = '0.4';
         document.getElementById('error').textContent = '';
     }
+
+    // Wire up all buttons using touch events
+    document.querySelectorAll('.key[data-digit]').forEach(function(el) {
+        tap(el, function() { press(el.getAttribute('data-digit')); });
+    });
+    tap(document.querySelector('[data-action="clear"]'), clearNum);
+    tap(document.getElementById('enterBtn'), function() { login(); });
+    tap(document.getElementById('inBtn'), function() { doPunch('in'); });
+    tap(document.getElementById('outBtn'), function() { doPunch('out'); });
+    tap(document.querySelector('[data-action="exit"]'), doExit);
 </script>
 <script>
     // Register service worker for PWA install
