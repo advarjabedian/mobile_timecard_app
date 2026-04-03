@@ -112,6 +112,7 @@
             font-weight: 700;
             cursor: pointer;
             color: var(--text);
+            text-align: center;
             user-select: none;
             -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
@@ -135,10 +136,13 @@
             font-weight: 700;
             cursor: pointer;
             color: #fff;
+            text-align: center;
+            user-select: none;
+            -webkit-user-select: none;
             touch-action: manipulation;
             box-shadow: 0 4px 16px rgba(15,118,110,0.25);
+            opacity: 0.4;
         }
-        .enter-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .error {
             color: var(--danger);
@@ -326,36 +330,26 @@
             font-size: 1.2rem;
             font-weight: 800;
             cursor: pointer;
-            transition: transform 140ms ease, box-shadow 140ms ease;
+            text-align: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
         }
-        .action-btn:hover:not(:disabled) { transform: translateY(-2px); }
-        .action-btn:active:not(:disabled) { transform: translateY(0); }
-        .action-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
         .in-btn {
             background: linear-gradient(135deg, var(--primary), var(--primary-strong));
             color: #fff;
-            box-shadow: 0 4px 16px rgba(15,118,110,0.3);
         }
-        .in-btn:hover { box-shadow: 0 8px 24px rgba(15,118,110,0.35); }
 
         .out-btn {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             color: #fff;
-            box-shadow: 0 4px 16px rgba(245,158,11,0.3);
         }
-        .out-btn:hover { box-shadow: 0 8px 24px rgba(245,158,11,0.35); }
 
         .exit-btn {
             background: rgba(17,53,41,0.06);
             border: 1px solid var(--line);
             color: var(--muted);
-            box-shadow: none;
-        }
-        .exit-btn:hover {
-            background: rgba(17,53,41,0.1);
-            color: var(--text);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
         }
 
         /* Status pill */
@@ -612,6 +606,8 @@
     }
 
     async function doPunch(type) {
+        var btn = type === 'in' ? document.getElementById('inBtn') : document.getElementById('outBtn');
+        if (btn.dataset.disabled === 'true') return;
         const url = type === 'in' ? '/punch-in/' : '/punch-out/';
         const res = await fetch(API + url, {
             method: 'POST',
