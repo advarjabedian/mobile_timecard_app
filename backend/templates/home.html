@@ -345,8 +345,13 @@
             color: #fff;
         }
 
-        .out-btn {
+        .break-btn {
             background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+        }
+
+        .finish-btn {
+            background: linear-gradient(135deg, var(--danger), #991b1b);
             color: #fff;
         }
 
@@ -395,75 +400,6 @@
             line-height: 1.4;
         }
 
-        /* ---- MODAL OVERLAY ---- */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.45);
-            z-index: 1000;
-            place-items: center;
-        }
-        .modal-overlay.active {
-            display: grid;
-        }
-
-        .modal-box {
-            background: #fff;
-            border-radius: 24px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.18);
-            padding: 2rem 1.5rem 1.5rem;
-            width: 90%;
-            max-width: 380px;
-            text-align: center;
-        }
-        .modal-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: var(--text);
-        }
-        .modal-subtitle {
-            font-size: 0.9rem;
-            color: var(--muted);
-            margin-bottom: 1.5rem;
-            line-height: 1.4;
-        }
-        .modal-btns {
-            display: flex;
-            gap: 0.75rem;
-        }
-        .modal-btn {
-            flex: 1;
-            padding: 1rem 0;
-            border: none;
-            border-radius: 14px;
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-        }
-        .modal-btn-break {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #fff;
-        }
-        .modal-btn-finish {
-            background: linear-gradient(135deg, var(--danger), #991b1b);
-            color: #fff;
-        }
-        .modal-btn-cancel {
-            background: rgba(17,53,41,0.06);
-            border: 1px solid var(--line);
-            color: var(--muted);
-        }
-        .modal-btn-confirm {
-            background: linear-gradient(135deg, var(--danger), #991b1b);
-            color: #fff;
-        }
     </style>
 </head>
 <body>
@@ -520,35 +456,7 @@
             </div>
         </div>
 
-        <div class="btn-row">
-            <div class="action-btn in-btn" id="inBtn" data-action="punch-in">Punch In</div>
-            <div class="action-btn out-btn" id="outBtn" data-action="punch-out">Punch Out</div>
-            <div class="action-btn exit-btn" data-action="exit">Exit</div>
-        </div>
-    </div>
-</div>
-
-<!-- PUNCH OUT MODAL -->
-<div class="modal-overlay" id="punchOutModal">
-    <div class="modal-box">
-        <div class="modal-title">Clocking Out</div>
-        <div class="modal-subtitle">Are you taking a break or finishing your day?</div>
-        <div class="modal-btns">
-            <div class="modal-btn modal-btn-break" id="modalBreakBtn">Break</div>
-            <div class="modal-btn modal-btn-finish" id="modalFinishBtn">Finish Day</div>
-        </div>
-    </div>
-</div>
-
-<!-- FINISH DAY CONFIRMATION MODAL -->
-<div class="modal-overlay" id="finishConfirmModal">
-    <div class="modal-box">
-        <div class="modal-title">Finish Day?</div>
-        <div class="modal-subtitle">This will end your working day. All hours will be assigned to the date your shift started.</div>
-        <div class="modal-btns">
-            <div class="modal-btn modal-btn-cancel" id="finishCancelBtn">Cancel</div>
-            <div class="modal-btn modal-btn-confirm" id="finishConfirmBtn">Yes, Finish Day</div>
-        </div>
+        <div class="btn-row" id="btnRow"></div>
     </div>
 </div>
 
@@ -661,8 +569,16 @@
     }
 
     async function loadTodayPunches() {
-        const res = await fetch(API + '/today/' + employee.id + '/');
-        const punches = await res.json();
+        // Fetch global status first to determine the active working day
+        const statusData = await (await fetch(API + '/status/' + employee.id + '/')).json();
+        var lastPunch = statusData.last_punch;
+
+        // If working or on break, show punches for that shift's scan_date; otherwise today
+        var dateParam = '';
+        if (lastPunch && (lastPunch.working || !lastPunch.day_finished)) {
+            dateParam = '?date=' + lastPunch.scan_date;
+        }
+        const punches = await (await fetch(API + '/today/' + employee.id + '/' + dateParam)).json();
 
         let logHtml = '';
         punches.forEach(p => {
@@ -674,21 +590,28 @@
         });
         document.getElementById('punchLog').innerHTML = logHtml;
 
-        // Status pill + button toggle
-        const lastPunch = punches.length > 0 ? punches[punches.length - 1] : null;
+        // Determine state from global last punch
         const pillEl = document.getElementById('statusPill');
-        const isIn = lastPunch ? lastPunch.working : false;
-
+        var state = 'not_working';
         if (lastPunch) {
-            pillEl.innerHTML = '<div class="status-pill ' + (isIn ? 'is-in' : 'is-out') + '"><span class="status-dot"></span>' + (isIn ? 'Clocked In' : 'Clocked Out') + '</div>';
+            if (lastPunch.working) {
+                state = 'working';
+            } else if (!lastPunch.day_finished) {
+                state = 'on_break';
+            }
+        }
+
+        // Status pill
+        if (state === 'working') {
+            pillEl.innerHTML = '<div class="status-pill is-in"><span class="status-dot"></span>Clocked In</div>';
+        } else if (state === 'on_break') {
+            pillEl.innerHTML = '<div class="status-pill is-out"><span class="status-dot"></span>On Break</div>';
         } else {
             pillEl.innerHTML = '<div class="status-pill is-out"><span class="status-dot"></span>Not Clocked In</div>';
         }
 
-        document.getElementById('inBtn').style.opacity = isIn ? '0.35' : '1';
-        document.getElementById('inBtn').dataset.disabled = isIn;
-        document.getElementById('outBtn').style.opacity = !isIn ? '0.35' : '1';
-        document.getElementById('outBtn').dataset.disabled = !isIn;
+        // Dynamic buttons
+        renderButtons(state);
 
         // Calculate hours
         let hours = 0;
@@ -703,12 +626,7 @@
         document.getElementById('hoursWorked').textContent = hours.toFixed(1) + ' hrs';
     }
 
-    async function doPunch(type, dayFinished) {
-        var btn = type === 'in' ? document.getElementById('inBtn') : document.getElementById('outBtn');
-        if (btn.dataset.disabled === 'true') return;
-        const url = type === 'in' ? '/punch-in/' : '/punch-out/';
-        var body = {employee_id: employee.id};
-        if (dayFinished) body.day_finished = true;
+    async function doPunch(url, body) {
         const res = await fetch(API + url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -721,26 +639,44 @@
         }
     }
 
-    function showPunchOutModal() {
-        var btn = document.getElementById('outBtn');
-        if (btn.dataset.disabled === 'true') return;
-        if (autoExitTimer) clearTimeout(autoExitTimer);
-        document.getElementById('punchOutModal').classList.add('active');
-    }
+    function renderButtons(state) {
+        var row = document.getElementById('btnRow');
+        row.innerHTML = '';
+        var btns = [];
 
-    function hidePunchOutModal() {
-        document.getElementById('punchOutModal').classList.remove('active');
-        resetAutoExit();
-    }
+        if (state === 'working') {
+            var breakBtn = document.createElement('div');
+            breakBtn.className = 'action-btn break-btn';
+            breakBtn.textContent = 'Start Break';
+            tap(breakBtn, function() { doPunch('/punch-out/', {employee_id: employee.id, day_finished: false}); });
+            btns.push(breakBtn);
 
-    function showFinishConfirm() {
-        document.getElementById('punchOutModal').classList.remove('active');
-        document.getElementById('finishConfirmModal').classList.add('active');
-    }
+            var finishBtn = document.createElement('div');
+            finishBtn.className = 'action-btn finish-btn';
+            finishBtn.textContent = 'Finish Day';
+            tap(finishBtn, function() { doPunch('/punch-out/', {employee_id: employee.id, day_finished: true}); });
+            btns.push(finishBtn);
+        } else if (state === 'on_break') {
+            var endBreakBtn = document.createElement('div');
+            endBreakBtn.className = 'action-btn in-btn';
+            endBreakBtn.textContent = 'Finish Break';
+            tap(endBreakBtn, function() { doPunch('/punch-in/', {employee_id: employee.id}); });
+            btns.push(endBreakBtn);
+        } else {
+            var punchInBtn = document.createElement('div');
+            punchInBtn.className = 'action-btn in-btn';
+            punchInBtn.textContent = 'Punch In';
+            tap(punchInBtn, function() { doPunch('/punch-in/', {employee_id: employee.id}); });
+            btns.push(punchInBtn);
+        }
 
-    function hideFinishConfirm() {
-        document.getElementById('finishConfirmModal').classList.remove('active');
-        resetAutoExit();
+        var exitBtn = document.createElement('div');
+        exitBtn.className = 'action-btn exit-btn';
+        exitBtn.textContent = 'Exit';
+        tap(exitBtn, function() { doExit(); });
+        btns.push(exitBtn);
+
+        btns.forEach(function(b) { row.appendChild(b); });
     }
 
     function doExit() {
@@ -761,17 +697,6 @@
     });
     tap(document.querySelector('[data-action="clear"]'), clearNum);
     tap(document.getElementById('enterBtn'), function() { login(); });
-    tap(document.getElementById('inBtn'), function() { doPunch('in'); });
-    tap(document.getElementById('outBtn'), function() { showPunchOutModal(); });
-    tap(document.querySelector('[data-action="exit"]'), doExit);
-
-    // Punch-out modal buttons
-    tap(document.getElementById('modalBreakBtn'), function() { hidePunchOutModal(); doPunch('out', false); });
-    tap(document.getElementById('modalFinishBtn'), function() { showFinishConfirm(); });
-
-    // Finish day confirmation buttons
-    tap(document.getElementById('finishCancelBtn'), function() { hideFinishConfirm(); });
-    tap(document.getElementById('finishConfirmBtn'), function() { hideFinishConfirm(); doPunch('out', true); });
 </script>
 <script>
     // Register service worker for PWA install

@@ -36,10 +36,16 @@ def punch_in(request):
         return Response({"error": "Already punched in."}, status=400)
 
     now = timezone.now()
+    # Returning from break: carry forward the original scan_date
+    if last_scan and not last_scan.working and not last_scan.day_finished:
+        scan_date = last_scan.scan_date
+    else:
+        scan_date = now.date()
+
     scan = PayrollScan.objects.create(
         import_run_id=31,
         employee_id=int(employee_id),
-        scan_date=now.date(),
+        scan_date=scan_date,
         scan_time=now,
         working=True,
     )
@@ -79,11 +85,16 @@ def punch_history(request, employee_id):
 
 @api_view(["GET"])
 def today_punches(request, employee_id):
-    """Get today's punches for an employee."""
-    today = timezone.now().date()
+    """Get punches for an employee by scan_date. Defaults to today."""
+    date_str = request.query_params.get("date")
+    if date_str:
+        from datetime import date as dt_date
+        scan_date = dt_date.fromisoformat(date_str)
+    else:
+        scan_date = timezone.now().date()
     scans = PayrollScan.objects.filter(
         employee_id=employee_id,
-        scan_date=today,
+        scan_date=scan_date,
     ).order_by("scan_time")
     return Response(PayrollScanSerializer(scans, many=True).data)
 
