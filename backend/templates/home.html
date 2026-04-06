@@ -236,6 +236,10 @@
             color: var(--danger);
             font-weight: 700;
         }
+        .punch-log-row .day-finished-label {
+            color: var(--danger);
+            font-weight: 800;
+        }
 
         .hours-section {
             display: flex;
@@ -665,7 +669,7 @@
             const d = new Date(p.scan_time);
             const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
             const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true});
-            const cls = p.working ? 'punch-in-label' : 'punch-out-label';
+            const cls = p.working ? 'punch-in-label' : (p.day_finished ? 'day-finished-label' : 'punch-out-label');
             logHtml += '<div class="punch-log-row"><span>' + dateStr + '</span><span>' + timeStr + '</span><span class="' + cls + '">' + p.punch_type + '</span></div>';
         });
         document.getElementById('punchLog').innerHTML = logHtml;
