@@ -66,6 +66,7 @@ class PayrollScan(models.Model):
     scan_date = models.DateField(null=True, blank=True)
     scan_time = models.DateTimeField(null=True, blank=True)
     working = models.BooleanField(default=False)
+    day_finished = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

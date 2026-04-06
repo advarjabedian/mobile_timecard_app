@@ -44,7 +44,7 @@ class PayrollScanSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PayrollScan
-        fields = ["id", "employee_id", "scan_date", "scan_time", "working", "punch_type"]
+        fields = ["id", "employee_id", "scan_date", "scan_time", "working", "day_finished", "punch_type"]
 
     def get_punch_type(self, obj):
         return "Punch In" if obj.working else "Punch Out"

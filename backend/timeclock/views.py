@@ -50,6 +50,7 @@ def punch_in(request):
 def punch_out(request):
     """Punch out: create a new row with working=False."""
     employee_id = request.data.get("employee_id")
+    day_finished = request.data.get("day_finished", False)
     if not employee_id:
         return Response({"error": "employee_id is required."}, status=400)
 
@@ -64,6 +65,7 @@ def punch_out(request):
         scan_date=last_scan.scan_date,
         scan_time=now,
         working=False,
+        day_finished=bool(day_finished),
     )
     return Response(PayrollScanSerializer(scan).data, status=201)
 
