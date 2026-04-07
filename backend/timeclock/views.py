@@ -1,3 +1,5 @@
+import zoneinfo
+
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -5,6 +7,13 @@ from rest_framework.response import Response
 
 from .models import Employee, PayrollScan
 from .serializers import EmployeeSerializer, PayrollScanSerializer
+
+LA_TZ = zoneinfo.ZoneInfo("America/Los_Angeles")
+
+
+def la_now():
+    """Return the current datetime in Los Angeles timezone."""
+    return timezone.now().astimezone(LA_TZ)
 
 
 @api_view(["POST"])
@@ -35,7 +44,7 @@ def punch_in(request):
     if last_scan and last_scan.working:
         return Response({"error": "Already punched in."}, status=400)
 
-    now = timezone.now()
+    now = la_now()
     # Returning from break: carry forward the original scan_date
     if last_scan and not last_scan.working and not last_scan.day_finished:
         scan_date = last_scan.scan_date
@@ -64,7 +73,7 @@ def punch_out(request):
     if not last_scan or not last_scan.working:
         return Response({"error": "Not currently punched in."}, status=400)
 
-    now = timezone.now()
+    now = la_now()
     scan = PayrollScan.objects.create(
         import_run_id=31,
         employee_id=int(employee_id),
@@ -91,7 +100,7 @@ def today_punches(request, employee_id):
         from datetime import date as dt_date
         scan_date = dt_date.fromisoformat(date_str)
     else:
-        scan_date = timezone.now().date()
+        scan_date = la_now().date()
     scans = PayrollScan.objects.filter(
         employee_id=employee_id,
         scan_date=scan_date,

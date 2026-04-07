@@ -532,7 +532,8 @@
 
         const now = new Date();
         document.getElementById('empDate').textContent = now.toLocaleDateString('en-US', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+            timeZone: 'America/Los_Angeles'
         });
 
         buildSchedule();
@@ -548,7 +549,8 @@
     function buildSchedule() {
         const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
         const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        const todayIdx = new Date().getDay();
+        const todayIdx = parseInt(new Date().toLocaleDateString('en-US', {weekday:'numeric', timeZone:'America/Los_Angeles'})) % 7;
+        // Sunday=0 .. Saturday=6, forced to LA timezone
         const s = employee.schedule;
 
         let html = '<tr><th>Role</th>';
@@ -583,8 +585,8 @@
         let logHtml = '';
         punches.forEach(p => {
             const d = new Date(p.scan_time);
-            const dateStr = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
-            const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true});
+            const dateStr = d.toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'numeric', timeZone:'America/Los_Angeles'});
+            const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles'});
             const cls = p.working ? 'punch-in-label' : (p.day_finished ? 'day-finished-label' : 'punch-out-label');
             logHtml += '<div class="punch-log-row"><span>' + dateStr + '</span><span>' + timeStr + '</span><span class="' + cls + '">' + p.punch_type + '</span></div>';
         });
