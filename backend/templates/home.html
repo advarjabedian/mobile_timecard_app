@@ -157,7 +157,7 @@
         .punch-screen.active { display: block; }
 
         .punch-container {
-            min-height: 100vh;
+            height: 100vh;
             width: 100vw;
             position: fixed;
             top: 0; left: 0;
@@ -165,6 +165,7 @@
             display: flex;
             flex-direction: column;
             background: #ffffff;
+            overflow-y: auto;
         }
 
         .punch-header {
@@ -457,6 +458,7 @@
         </div>
 
         <div class="btn-row" id="btnRow"></div>
+        <pre id="debugBox" style="background:#111;color:#0f0;font-size:11px;padding:8px;margin-top:8px;max-height:200px;overflow-y:auto;border-radius:8px;display:none;white-space:pre-wrap;word-break:break-all;"></pre>
     </div>
 </div>
 
@@ -466,6 +468,16 @@
     let employee = null;
     let autoExitTimer = null;
     let enterDisabled = true;
+
+    function dbg(msg) {
+        console.log('DEBUG: ' + msg);
+        var box = document.getElementById('debugBox');
+        if (box) {
+            box.style.display = 'block';
+            box.textContent += new Date().toLocaleTimeString() + ' | ' + msg + '\n';
+            box.scrollTop = box.scrollHeight;
+        }
+    }
 
     function press(d) {
         if (number.length < 10) {
@@ -526,6 +538,7 @@
     }
 
     function showPunchScreen() {
+        dbg('showPunchScreen called, employee.number=' + employee.number);
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('punchScreen').classList.add('active');
         document.getElementById('empName').textContent = employee.full_name;
@@ -537,6 +550,7 @@
         });
 
         buildSchedule();
+        dbg('buildSchedule done, calling loadTodayPunches...');
         loadTodayPunches();
         resetAutoExit();
     }
@@ -549,7 +563,7 @@
     function buildSchedule() {
         const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
         const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        const todayIdx = parseInt(new Date().toLocaleDateString('en-US', {weekday:'numeric', timeZone:'America/Los_Angeles'})) % 7;
+        const todayIdx = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Los_Angeles'})).getDay();
         // Sunday=0 .. Saturday=6, forced to LA timezone
         const s = employee.schedule;
 
@@ -571,39 +585,67 @@
     }
 
     async function loadTodayPunches() {
-        // Fetch global status first to determine the active working day
-        const statusData = await (await fetch(API + '/status/' + employee.id + '/')).json();
-        var lastPunch = statusData.last_punch;
-
-        // If working or on break, show punches for that shift's scan_date; otherwise today
-        var dateParam = '';
-        if (lastPunch && (lastPunch.working || !lastPunch.day_finished)) {
-            dateParam = '?date=' + lastPunch.scan_date;
-        }
-        const punches = await (await fetch(API + '/today/' + employee.id + '/' + dateParam)).json();
-
-        let logHtml = '';
-        punches.forEach(p => {
-            const d = new Date(p.scan_time);
-            const dateStr = d.toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'numeric', timeZone:'America/Los_Angeles'});
-            const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles'});
-            const cls = p.working ? 'punch-in-label' : (p.day_finished ? 'day-finished-label' : 'punch-out-label');
-            logHtml += '<div class="punch-log-row"><span>' + dateStr + '</span><span>' + timeStr + '</span><span class="' + cls + '">' + p.punch_type + '</span></div>';
-        });
-        document.getElementById('punchLog').innerHTML = logHtml;
-
-        // Determine state from global last punch
-        const pillEl = document.getElementById('statusPill');
+        dbg('loadTodayPunches START');
         var state = 'not_working';
-        if (lastPunch) {
-            if (lastPunch.working) {
-                state = 'working';
-            } else if (!lastPunch.day_finished) {
-                state = 'on_break';
+        var punches = [];
+        try {
+            // Fetch global status first to determine the active working day
+            dbg('fetching status: ' + API + '/status/' + employee.number + '/');
+            const statusRes = await fetch(API + '/status/' + employee.number + '/');
+            dbg('status response: ' + statusRes.status);
+            const statusData = await statusRes.json();
+            dbg('status data: ' + JSON.stringify(statusData));
+            var lastPunch = statusData.last_punch;
+
+            // If working or on break, show punches for that shift's scan_date; otherwise today
+            var dateParam = '';
+            if (lastPunch && (lastPunch.working || !lastPunch.day_finished)) {
+                dateParam = '?date=' + lastPunch.scan_date;
             }
+            dbg('fetching today: ' + API + '/today/' + employee.number + '/' + dateParam);
+            const punchesRes = await fetch(API + '/today/' + employee.number + '/' + dateParam);
+            dbg('today response: ' + punchesRes.status);
+            punches = await punchesRes.json();
+            dbg('punches count: ' + punches.length);
+
+            let logHtml = '';
+            punches.forEach(p => {
+                const d = new Date(p.scan_time);
+                const dateStr = d.toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'numeric', timeZone:'America/Los_Angeles'});
+                const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles'});
+                const cls = p.working ? 'punch-in-label' : (p.day_finished ? 'day-finished-label' : 'punch-out-label');
+                logHtml += '<div class="punch-log-row"><span>' + dateStr + '</span><span>' + timeStr + '</span><span class="' + cls + '">' + p.punch_type + '</span></div>';
+            });
+            document.getElementById('punchLog').innerHTML = logHtml;
+
+            // Determine state from global last punch
+            if (lastPunch) {
+                if (lastPunch.working) {
+                    state = 'working';
+                } else if (!lastPunch.day_finished) {
+                    state = 'on_break';
+                }
+            }
+            dbg('determined state: ' + state);
+
+            // Calculate hours
+            let hours = 0;
+            for (let i = 0; i < punches.length - 1; i += 2) {
+                const inT = new Date(punches[i].scan_time).getTime();
+                const outT = (i+1 < punches.length) ? new Date(punches[i+1].scan_time).getTime() : Date.now();
+                hours += (outT - inT) / 3600000;
+            }
+            if (punches.length % 2 === 1) {
+                hours += (Date.now() - new Date(punches[punches.length-1].scan_time).getTime()) / 3600000;
+            }
+            document.getElementById('hoursWorked').textContent = hours.toFixed(1) + ' hrs';
+        } catch (e) {
+            dbg('ERROR in loadTodayPunches: ' + e.message + ' | ' + e.stack);
         }
 
-        // Status pill
+        // Status pill — always render
+        dbg('rendering pill + buttons, state=' + state);
+        const pillEl = document.getElementById('statusPill');
         if (state === 'working') {
             pillEl.innerHTML = '<div class="status-pill is-in"><span class="status-dot"></span>Clocked In</div>';
         } else if (state === 'on_break') {
@@ -612,20 +654,10 @@
             pillEl.innerHTML = '<div class="status-pill is-out"><span class="status-dot"></span>Not Clocked In</div>';
         }
 
-        // Dynamic buttons
+        // Dynamic buttons — always render
+        dbg('calling renderButtons(' + state + ')');
         renderButtons(state);
-
-        // Calculate hours
-        let hours = 0;
-        for (let i = 0; i < punches.length - 1; i += 2) {
-            const inT = new Date(punches[i].scan_time).getTime();
-            const outT = (i+1 < punches.length) ? new Date(punches[i+1].scan_time).getTime() : Date.now();
-            hours += (outT - inT) / 3600000;
-        }
-        if (punches.length % 2 === 1) {
-            hours += (Date.now() - new Date(punches[punches.length-1].scan_time).getTime()) / 3600000;
-        }
-        document.getElementById('hoursWorked').textContent = hours.toFixed(1) + ' hrs';
+        dbg('renderButtons done, btnRow children: ' + document.getElementById('btnRow').children.length);
     }
 
     async function doPunch(url, body) {
@@ -642,7 +674,9 @@
     }
 
     function renderButtons(state) {
+        dbg('renderButtons called with state=' + state);
         var row = document.getElementById('btnRow');
+        dbg('btnRow element: ' + (row ? 'found, display=' + getComputedStyle(row).display + ', height=' + row.offsetHeight : 'NOT FOUND'));
         row.innerHTML = '';
         var btns = [];
 
@@ -650,25 +684,25 @@
             var breakBtn = document.createElement('div');
             breakBtn.className = 'action-btn break-btn';
             breakBtn.textContent = 'Start Break';
-            tap(breakBtn, function() { doPunch('/punch-out/', {employee_id: employee.id, day_finished: false}); });
+            tap(breakBtn, function() { doPunch('/punch-out/', {employee_number: employee.number, day_finished: false}); });
             btns.push(breakBtn);
 
             var finishBtn = document.createElement('div');
             finishBtn.className = 'action-btn finish-btn';
             finishBtn.textContent = 'Finish Day';
-            tap(finishBtn, function() { doPunch('/punch-out/', {employee_id: employee.id, day_finished: true}); });
+            tap(finishBtn, function() { doPunch('/punch-out/', {employee_number: employee.number, day_finished: true}); });
             btns.push(finishBtn);
         } else if (state === 'on_break') {
             var endBreakBtn = document.createElement('div');
             endBreakBtn.className = 'action-btn in-btn';
             endBreakBtn.textContent = 'Finish Break';
-            tap(endBreakBtn, function() { doPunch('/punch-in/', {employee_id: employee.id}); });
+            tap(endBreakBtn, function() { doPunch('/punch-in/', {employee_number: employee.number}); });
             btns.push(endBreakBtn);
         } else {
             var punchInBtn = document.createElement('div');
             punchInBtn.className = 'action-btn in-btn';
             punchInBtn.textContent = 'Punch In';
-            tap(punchInBtn, function() { doPunch('/punch-in/', {employee_id: employee.id}); });
+            tap(punchInBtn, function() { doPunch('/punch-in/', {employee_number: employee.number}); });
             btns.push(punchInBtn);
         }
 
