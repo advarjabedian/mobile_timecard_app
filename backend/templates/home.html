@@ -458,7 +458,6 @@
         </div>
 
         <div class="btn-row" id="btnRow"></div>
-        <pre id="debugBox" style="background:#111;color:#0f0;font-size:11px;padding:8px;margin-top:8px;max-height:200px;overflow-y:auto;border-radius:8px;display:none;white-space:pre-wrap;word-break:break-all;"></pre>
     </div>
 </div>
 
@@ -469,17 +468,7 @@
     let autoExitTimer = null;
     let enterDisabled = true;
 
-    function dbg(msg) {
-        console.log('DEBUG: ' + msg);
-        var box = document.getElementById('debugBox');
-        if (box) {
-            box.style.display = 'block';
-            box.textContent += new Date().toLocaleTimeString() + ' | ' + msg + '\n';
-            box.scrollTop = box.scrollHeight;
-        }
-    }
-
-    function press(d) {
+function press(d) {
         if (number.length < 10) {
             number += d;
             document.getElementById('display').textContent = number;
@@ -538,7 +527,6 @@
     }
 
     function showPunchScreen() {
-        dbg('showPunchScreen called, employee.number=' + employee.number);
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('punchScreen').classList.add('active');
         document.getElementById('empName').textContent = employee.full_name;
@@ -550,7 +538,6 @@
         });
 
         buildSchedule();
-        dbg('buildSchedule done, calling loadTodayPunches...');
         loadTodayPunches();
         resetAutoExit();
     }
@@ -585,16 +572,12 @@
     }
 
     async function loadTodayPunches() {
-        dbg('loadTodayPunches START');
         var state = 'not_working';
         var punches = [];
         try {
             // Fetch global status first to determine the active working day
-            dbg('fetching status: ' + API + '/status/' + employee.number + '/');
             const statusRes = await fetch(API + '/status/' + employee.number + '/');
-            dbg('status response: ' + statusRes.status);
             const statusData = await statusRes.json();
-            dbg('status data: ' + JSON.stringify(statusData));
             var lastPunch = statusData.last_punch;
 
             // If working or on break, show punches for that shift's scan_date; otherwise today
@@ -602,11 +585,8 @@
             if (lastPunch && (lastPunch.working || !lastPunch.day_finished)) {
                 dateParam = '?date=' + lastPunch.scan_date;
             }
-            dbg('fetching today: ' + API + '/today/' + employee.number + '/' + dateParam);
             const punchesRes = await fetch(API + '/today/' + employee.number + '/' + dateParam);
-            dbg('today response: ' + punchesRes.status);
             punches = await punchesRes.json();
-            dbg('punches count: ' + punches.length);
 
             let logHtml = '';
             punches.forEach(p => {
@@ -626,7 +606,6 @@
                     state = 'on_break';
                 }
             }
-            dbg('determined state: ' + state);
 
             // Calculate hours
             let hours = 0;
@@ -640,11 +619,9 @@
             }
             document.getElementById('hoursWorked').textContent = hours.toFixed(1) + ' hrs';
         } catch (e) {
-            dbg('ERROR in loadTodayPunches: ' + e.message + ' | ' + e.stack);
         }
 
         // Status pill — always render
-        dbg('rendering pill + buttons, state=' + state);
         const pillEl = document.getElementById('statusPill');
         if (state === 'working') {
             pillEl.innerHTML = '<div class="status-pill is-in"><span class="status-dot"></span>Clocked In</div>';
@@ -655,9 +632,7 @@
         }
 
         // Dynamic buttons — always render
-        dbg('calling renderButtons(' + state + ')');
         renderButtons(state);
-        dbg('renderButtons done, btnRow children: ' + document.getElementById('btnRow').children.length);
     }
 
     async function doPunch(url, body) {
@@ -674,9 +649,7 @@
     }
 
     function renderButtons(state) {
-        dbg('renderButtons called with state=' + state);
         var row = document.getElementById('btnRow');
-        dbg('btnRow element: ' + (row ? 'found, display=' + getComputedStyle(row).display + ', height=' + row.offsetHeight : 'NOT FOUND'));
         row.innerHTML = '';
         var btns = [];
 
