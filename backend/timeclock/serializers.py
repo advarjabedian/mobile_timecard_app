@@ -1,6 +1,10 @@
+import zoneinfo
+
 from rest_framework import serializers
 
 from .models import Employee, PayrollScan
+
+LA_TZ = zoneinfo.ZoneInfo("America/Los_Angeles")
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -41,10 +45,16 @@ def _fmt(t):
 
 class PayrollScanSerializer(serializers.ModelSerializer):
     punch_type = serializers.SerializerMethodField()
+    scan_time = serializers.SerializerMethodField()
 
     class Meta:
         model = PayrollScan
         fields = ["id", "employee_id", "scan_date", "scan_time", "working", "day_finished", "punch_type"]
+
+    def get_scan_time(self, obj):
+        if obj.scan_time:
+            return obj.scan_time.astimezone(LA_TZ).isoformat()
+        return None
 
     def get_punch_type(self, obj):
         if obj.working:
