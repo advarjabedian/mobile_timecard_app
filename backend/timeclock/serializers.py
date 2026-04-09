@@ -1,10 +1,21 @@
 import zoneinfo
 
+from django.utils import timezone as django_tz
 from rest_framework import serializers
 
 from .models import Employee, PayrollScan
 
 LA_TZ = zoneinfo.ZoneInfo("America/Los_Angeles")
+
+
+def _to_la(dt):
+    """Convert a datetime to LA time, handling naive datetimes from the DB."""
+    if dt is None:
+        return None
+    # If naive, assume UTC (Django stores UTC with USE_TZ=True)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
+    return dt.astimezone(LA_TZ)
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -54,14 +65,15 @@ class PayrollScanSerializer(serializers.ModelSerializer):
         fields = ["id", "employee_id", "scan_date", "scan_time", "scan_time_display", "scan_date_display", "working", "day_finished", "punch_type"]
 
     def get_scan_time(self, obj):
-        if obj.scan_time:
-            return obj.scan_time.astimezone(LA_TZ).isoformat()
+        la_time = _to_la(obj.scan_time)
+        if la_time:
+            return la_time.isoformat()
         return None
 
     def get_scan_time_display(self, obj):
         """Pre-formatted LA time string like '10:21 AM'."""
-        if obj.scan_time:
-            la_time = obj.scan_time.astimezone(LA_TZ)
+        la_time = _to_la(obj.scan_time)
+        if la_time:
             hour = la_time.hour % 12 or 12
             minute = la_time.strftime("%M")
             ampm = "AM" if la_time.hour < 12 else "PM"
@@ -70,8 +82,8 @@ class PayrollScanSerializer(serializers.ModelSerializer):
 
     def get_scan_date_display(self, obj):
         """Pre-formatted LA date string like '4/9/2026'."""
-        if obj.scan_time:
-            la_time = obj.scan_time.astimezone(LA_TZ)
+        la_time = _to_la(obj.scan_time)
+        if la_time:
             return f"{la_time.month}/{la_time.day}/{la_time.year}"
         return None
 

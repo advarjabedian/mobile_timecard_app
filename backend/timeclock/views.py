@@ -57,12 +57,13 @@ def punch_in(request):
     if last_scan and last_scan.working:
         return Response({"error": "Already punched in."}, status=400)
 
-    now = la_now()
+    now = timezone.now()
+    la_time = now.astimezone(LA_TZ)
     # Returning from break: carry forward the original scan_date
     if last_scan and not last_scan.working and not last_scan.day_finished:
         scan_date = last_scan.scan_date
     else:
-        scan_date = now.date()
+        scan_date = la_time.date()
 
     scan = PayrollScan.objects.create(
         import_run_id=31,
@@ -91,7 +92,7 @@ def punch_out(request):
     if not last_scan or not last_scan.working:
         return Response({"error": "Not currently punched in."}, status=400)
 
-    now = la_now()
+    now = timezone.now()
     scan = PayrollScan.objects.create(
         import_run_id=31,
         employee_id=emp.id,
@@ -125,11 +126,11 @@ def today_punches(request, employee_number):
         return Response({"error": "Employee not found."}, status=404)
     logger.info("[TODAY] resolved to employee id=%s", emp.id)
     date_str = request.query_params.get("date")
-    if date_str:
+    if date_str and date_str not in ("null", "None", ""):
         from datetime import date as dt_date
         scan_date = dt_date.fromisoformat(date_str)
     else:
-        scan_date = la_now().date()
+        scan_date = timezone.now().astimezone(LA_TZ).date()
     logger.info("[TODAY] querying payroll_scans: employee_id=%s, scan_date=%s", emp.id, scan_date)
     scans = PayrollScan.objects.filter(
         employee_id=emp.id,

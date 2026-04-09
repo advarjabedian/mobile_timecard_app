@@ -583,7 +583,7 @@ function press(d) {
 
             // If working or on break, show punches for that shift's scan_date; otherwise today
             var dateParam = '';
-            if (lastPunch && (lastPunch.working || !lastPunch.day_finished)) {
+            if (lastPunch && lastPunch.scan_date && (lastPunch.working || !lastPunch.day_finished)) {
                 dateParam = 'date=' + lastPunch.scan_date + '&';
             }
             const punchesRes = await fetch(API + '/today/' + employee.number + '/?' + dateParam + cacheBust);
