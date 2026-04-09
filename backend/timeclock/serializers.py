@@ -46,14 +46,33 @@ def _fmt(t):
 class PayrollScanSerializer(serializers.ModelSerializer):
     punch_type = serializers.SerializerMethodField()
     scan_time = serializers.SerializerMethodField()
+    scan_time_display = serializers.SerializerMethodField()
+    scan_date_display = serializers.SerializerMethodField()
 
     class Meta:
         model = PayrollScan
-        fields = ["id", "employee_id", "scan_date", "scan_time", "working", "day_finished", "punch_type"]
+        fields = ["id", "employee_id", "scan_date", "scan_time", "scan_time_display", "scan_date_display", "working", "day_finished", "punch_type"]
 
     def get_scan_time(self, obj):
         if obj.scan_time:
             return obj.scan_time.astimezone(LA_TZ).isoformat()
+        return None
+
+    def get_scan_time_display(self, obj):
+        """Pre-formatted LA time string like '10:21 AM'."""
+        if obj.scan_time:
+            la_time = obj.scan_time.astimezone(LA_TZ)
+            hour = la_time.hour % 12 or 12
+            minute = la_time.strftime("%M")
+            ampm = "AM" if la_time.hour < 12 else "PM"
+            return f"{hour}:{minute} {ampm}"
+        return None
+
+    def get_scan_date_display(self, obj):
+        """Pre-formatted LA date string like '4/9/2026'."""
+        if obj.scan_time:
+            la_time = obj.scan_time.astimezone(LA_TZ)
+            return f"{la_time.month}/{la_time.day}/{la_time.year}"
         return None
 
     def get_punch_type(self, obj):

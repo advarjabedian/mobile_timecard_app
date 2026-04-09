@@ -576,23 +576,23 @@ function press(d) {
         var punches = [];
         try {
             // Fetch global status first to determine the active working day
-            const statusRes = await fetch(API + '/status/' + employee.number + '/');
+            const cacheBust = '_t=' + Date.now();
+            const statusRes = await fetch(API + '/status/' + employee.number + '/?' + cacheBust);
             const statusData = await statusRes.json();
             var lastPunch = statusData.last_punch;
 
             // If working or on break, show punches for that shift's scan_date; otherwise today
             var dateParam = '';
             if (lastPunch && (lastPunch.working || !lastPunch.day_finished)) {
-                dateParam = '?date=' + lastPunch.scan_date;
+                dateParam = 'date=' + lastPunch.scan_date + '&';
             }
-            const punchesRes = await fetch(API + '/today/' + employee.number + '/' + dateParam);
+            const punchesRes = await fetch(API + '/today/' + employee.number + '/?' + dateParam + cacheBust);
             punches = await punchesRes.json();
 
             let logHtml = '';
             punches.forEach(p => {
-                const d = new Date(p.scan_time);
-                const dateStr = d.toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'numeric', timeZone:'America/Los_Angeles'});
-                const timeStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Los_Angeles'});
+                const dateStr = p.scan_date_display || p.scan_date;
+                const timeStr = p.scan_time_display || '';
                 const cls = p.working ? 'punch-in-label' : (p.day_finished ? 'day-finished-label' : 'punch-out-label');
                 logHtml += '<div class="punch-log-row"><span>' + dateStr + '</span><span>' + timeStr + '</span><span class="' + cls + '">' + p.punch_type + '</span></div>';
             });
